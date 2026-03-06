@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord x Supabase 登入測試</title>
+    <!-- 引入 Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #36393f; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .container { background: #2f3136; padding: 40px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-align: center; width: 350px; }
+        h1 { font-size: 24px; margin-bottom: 20px; }
+        .btn-discord { background-color: #5865F2; color: white; border: none; padding: 12px 24px; border-radius: 4px; font-size: 16px; cursor: pointer; font-weight: 600; width: 100%; transition: 0.3s; }
+        .btn-discord:hover { background-color: #4752C4; }
+        .profile { display: none; }
+        .avatar { width: 100px; height: 100px; border-radius: 50%; border: 3px solid #5865F2; margin-bottom: 15px; }
+        .logout-link { color: #f04747; cursor: pointer; text-decoration: underline; display: block; margin-top: 20px; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- 未登入狀態 -->
+    <div id="login-view">
+        <h1>歡迎回來</h1>
+        <p style="color: #b9bbbe; margin-bottom: 30px;">使用 Discord 帳號開始紀錄</p>
+        <button class="btn-discord" onclick="loginWithDiscord()">使用 Discord 登入</button>
+    </div>
+
+    <!-- 登入後狀態 -->
+    <div id="profile-view" class="profile">
+        <img id="user-avatar" class="avatar" src="" alt="Avatar">
+        <h2 id="user-name">載入中...</h2>
+        <p id="user-email" style="color: #b9bbbe;"></p>
+        <div style="background: #202225; padding: 15px; border-radius: 4px; margin-top: 15px;">
+            驗證成功！這是你的私人控制面板。
+        </div>
+        <span class="logout-link" onclick="handleLogout()">登出帳號</span>
+    </div>
+</div>
+
+<script>
+    // 1. 配置你的 Supabase 資訊 (請從 Supabase 後台 Settings -> API 取得)
+    const SUPABASE_URL = '你的_PROJECT_URL';
+    const SUPABASE_ANON_KEY = '你的_ANON_KEY';
+
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // 2. 登入邏輯
+    async function loginWithDiscord() {
+        const { error } = await supabaseClient.auth.signInWithOAuth({
+            provider: 'discord',
+            options: {
+                redirectTo: window.location.origin + window.location.pathname // 跳回當前頁面
+            }
+        });
+        if (error) alert('登入出錯: ' + error.message);
+    }
+
+    // 3. 檢查登入狀態
+    async function checkUser() {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        
+        if (user) {
+            document.getElementById('login-view').style.display = 'none';
+            const profileView = document.getElementById('profile-view');
+            profileView.style.display = 'block';
+
+            // 顯示 Discord 使用者資料
+            const meta = user.user_metadata;
+            document.getElementById('user-name').innerText = meta.full_name || 'Discord 使用者';
+            document.getElementById('user-email').innerText = user.email;
+            document.getElementById('user-avatar').src = meta.avatar_url;
+        }
+    }
+
+    // 4. 登出邏輯
+    async function handleLogout() {
+        await supabaseClient.auth.signOut();
+        window.location.reload();
+    }
+
+    // 初始化檢查
+    checkUser();
+</script>
+
+</body>
+</html>
